@@ -13,6 +13,7 @@ from django.contrib.auth import authenticate
 
 @api_view(['POST'])
 def sign_up(request):
+    username = request.data.get('first_name')
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
     email = request.data.get('email')
@@ -23,21 +24,23 @@ def sign_up(request):
         return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
     else: 
         if password == password_confirm:
-            user = models.CustomUser.objects.create_user(first_name=first_name, 
+            user = models.CustomUser.objects.create_user(
+                                                          username=username,
+                                                          first_name=first_name, 
                                                           last_name=last_name,
                                                           email=email,
                                                           phone_number=phone_number,
                                                           password=password,
                                                           )
             token, _ = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key})
-
+            return Response({'token': token.key}, status=status.HTTP_200_OK)
+ 
 
 @api_view(['POST'])
 def sign_in(request):
     email = request.data.get('email')
     password = request.data.get('password')
-    user = authenticate(email=email, password=password)
+    user = authenticate(request, email=email, password=password)
     if user is not None:
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key})
