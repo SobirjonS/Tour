@@ -6,7 +6,7 @@ class CustomUser(AbstractUser):
     is_admin = models.BooleanField(default=False)
     is_partner = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=255)
-    avatar = models.ImageField(upload_to='author_avatas/')
+    avatar = models.ImageField(upload_to='author_avatas/', null=True, blank=True)
 
     class Meta:
         swappable = 'AUTH_USER_MODEL'
@@ -21,17 +21,17 @@ class Tour(models.Model):
     
 
 class TourImage(models.Model):
-    path = models.ImageField(upload_to='tour_images/')
+    image = models.ImageField(upload_to='tour_images/', null=True, blank=True)
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
 
 class TourVideo(models.Model):
-    path = models.FileField(upload_to='tour_videos/')
+    media = models.FileField(upload_to='tour_videos/', null=True, blank=True)
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
 
 class TourService(models.Model):
-    description = models.TextField()
+    service_description = models.TextField()
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
 

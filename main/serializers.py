@@ -5,25 +5,25 @@ from . import models
 class TourImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TourImage
-        fields = ('path',)
+        fields = ('image',)
 
 
 class TourVideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TourVideo
-        fields = ('path',)
+        fields = ('media',)
 
 
 class TourServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TourService
-        fields = ('description',)
+        fields = ('service_description',)
 
 
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TourSeat
-        fields = ('all_seats', 'remaining_seats')
+        fields = ('seats')
 
 
 class TourSerializer(serializers.ModelSerializer):
