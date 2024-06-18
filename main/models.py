@@ -16,21 +16,21 @@ class Tour(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     cost = models.IntegerField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
+    start_time = models.DateField()
+    end_time = models.DateField()
     
 
-class Tour_image(models.Model):
+class TourImage(models.Model):
     path = models.ImageField(upload_to='tour_images/')
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
 
-class Tour_video(models.Model):
+class TourVideo(models.Model):
     path = models.FileField(upload_to='tour_videos/')
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
 
-class Tour_service(models.Model):
+class TourService(models.Model):
     description = models.TextField()
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
@@ -52,9 +52,8 @@ class Book(models.Model):
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
 
-class Seat(models.Model):
-    all_seats = models.IntegerField()
-    remaining_seats = models.IntegerField()
+class TourSeat(models.Model):
+    seats = models.IntegerField()
     tour =  models.ForeignKey(Tour, on_delete=models.CASCADE)
 
 

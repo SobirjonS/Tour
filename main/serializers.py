@@ -1,44 +1,61 @@
 from rest_framework import serializers
 from . import models
 
+
 class TourImageSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Tour_image
+        model = models.TourImage
         fields = ('path',)
+
 
 class TourVideoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Tour_video
+        model = models.TourVideo
         fields = ('path',)
+
 
 class TourServiceSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Tour_service
+        model = models.TourService
         fields = ('description',)
+
+
+class SeatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TourSeat
+        fields = ('all_seats', 'remaining_seats')
+
 
 class TourSerializer(serializers.ModelSerializer):
     images = TourImageSerializer(many=True, required=False)
     videos = TourVideoSerializer(many=True, required=False)
     services = TourServiceSerializer(many=True, required=False)
+    seats = serializers.IntegerField()
 
     class Meta:
         model = models.Tour
-        fields = ('name', 'description', 'cost', 'start_time', 'end_time', 'images', 'videos', 'services')
+        fields = ('name', 'description', 'cost', 'start_time', 'end_time', 'images', 'videos', 'services', 'seats')
 
     def create(self, validated_data):
         images_data = validated_data.pop('images', [])
         videos_data = validated_data.pop('videos', [])
         services_data = validated_data.pop('services', [])
+        seats = validated_data.pop('seats') 
 
         tour = models.Tour.objects.create(**validated_data)
 
+        seat = models.TourSeat.objects.create(
+            tour=tour,
+            seats=seats,
+        )
+
         for image_data in images_data:
-            models.Tour_image.objects.create(tour=tour, **image_data)
+            models.TourImage.objects.create(tour=tour, **image_data)
 
         for video_data in videos_data:
-            models.Tour_video.objects.create(tour=tour, **video_data)
+            models.TourVideo.objects.create(tour=tour, **video_data)
 
         for service_data in services_data:
-            models.Tour_service.objects.create(tour=tour, **service_data)
+            models.TourService.objects.create(tour=tour, **service_data)
 
         return tour
