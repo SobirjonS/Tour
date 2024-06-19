@@ -1,11 +1,24 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 
 from django.db import transaction
 
 from . import models
 from . import serializers
+
+from django.core.mail import send_mail
+from decouple import config
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def test_email(request):
+    user = request.user
+    send_mail('Subject here','keldi',config('EMAIL_HOST_USER'),[user.email],fail_silently=False,)
 
 
 @api_view(['POST'])
