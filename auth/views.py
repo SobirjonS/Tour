@@ -66,3 +66,11 @@ def update_user_data(request):
 def sign_out(request):
     request.user.auth_token.delete()
     return Response({'message': 'Successfully signed out'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def get_user_data(request):
+    serializer = serializers.CustomUserSerializer(request.user)
+    return Response(serializer.data)
