@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from django.db import transaction
 
 from . import models
-from . import serialisers
+from . import serializers
 
 from django.core.mail import send_mail
 from decouple import config
@@ -37,9 +37,9 @@ def create_category(request):
     
 
 @api_view(['GET'])
-def get_category(request):
+def get_categorys(request):
     categorys = models.Category.objects.all()
-    serialiser = serialisers.CategorySerializer(categorys, many=True)
+    serialiser = serializers.CategorySerializer(categorys, many=True)
     return Response(serialiser.data, status.HTTP_200_OK)
 
 
@@ -53,7 +53,19 @@ def update_category(request, pk):
         category.save()
         return Response("The category has been changed", status.HTTP_200_OK)
     except:
-        return Response('Bad request', status.HTTP_400_BAD_REQUEST)
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def delete_category(request, pk):
+    try:
+        category = models.Category.objects.get(pk=pk)
+        category.delete()
+        return Response("The category has been deleted", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
 
 
 # Tour
@@ -63,15 +75,18 @@ def update_category(request, pk):
 def create_tour(request):
     user = request.user
     data = request.data
+    print(data)
     try:
         images = request.FILES.getlist('image')
         videos = request.FILES.getlist('media')
-        service = data['service_description']
+        category = models.Category.objects.get(id=data['category'])
 
         tour = models.Tour.objects.create(
-            owner=user,
-            name=data['name'],
-            description=data['description'],
+            creator=user,
+            category=category,
+            place_name=data['place_name'],
+            title=data['title'],
+            body=data['body'],
             cost=data['cost'],
             start_time=data['start_time'],
             end_time=data['end_time'],
@@ -85,15 +100,50 @@ def create_tour(request):
             )
 
         for media in videos:
-            models.TourVideo.objects.create(
+            models.TourMedia.objects.create(
                 media=media,
                 tour=tour
             )
         
         models.TourService.objects.create(
-            service_description=service,
+            service=data['service'],
             tour=tour
         )
-        return Response('Complated !', status.HTTP_200_OK)
+        return Response('The tour has been created', status.HTTP_200_OK)
     except:
         return Response('Bad request', status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def get_tours(request):
+    tours = models.Tour.objects.all()
+    serializer = serializers.TourSerializer(tours, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def delete_tour(request, pk):
+    try:
+        tour = models.Tour.objects.get(pk=pk)
+        tour.delete()
+        return Response("The tour has been deleted", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def update_tour(request, pk):
+    # try:
+    tour = models.Tour.objects.get(pk=pk)
+    serializer = serializers.TourSerializer(tour, data=request.data, partial=(request.method == 'PATCH'))
+    if serializer.is_valid():
+        serializer.save()
+        # print("----------------------------------------------------")
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # except:
+    #     return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)

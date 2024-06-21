@@ -14,7 +14,7 @@ from . import serializers
 
 @api_view(['POST'])
 def sign_up(request):
-    username = request.data.get('first_name')
+    username = f"{request.data.get('first_name')} {request.data.get('last_name')}"
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
     email = request.data.get('email')

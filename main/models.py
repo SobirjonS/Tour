@@ -12,7 +12,7 @@ class CustomUser(AbstractUser):
         swappable = 'AUTH_USER_MODEL'
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return self.username
     
     class Meta:
         verbose_name = "Foydalanuvchi"
@@ -31,17 +31,20 @@ class Category(models.Model):
 
 
 class Tour(models.Model):
-    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    cost = models.IntegerField()
+    creator = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    place_name = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, null=True, blank=True)
+    body = models.TextField()
     start_time = models.DateField()
     end_time = models.DateField()
+    discount = models.IntegerField(default=0)
+    cost = models.IntegerField()
     seats = models.IntegerField()
 
+
     def __str__(self):
-        return f"{self.owner.first_name} - {self.name}"
+        return f"{self.creator} - {self.title}"
     
     class Meta:
         verbose_name = "Sayohat"
@@ -53,19 +56,19 @@ class TourImage(models.Model):
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.tour.name} - {self.image}"
+        return f"{self.tour.title} - {self.image}"
     
     class Meta:
         verbose_name = "Rasm"
         verbose_name_plural = "Rasmlar"   
 
 
-class TourVideo(models.Model):
+class TourMedia(models.Model):
     media = models.FileField(upload_to='tour_videos/', null=True, blank=True)
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.tour.name} - {self.media}"
+        return f"{self.tour.title} - {self.media}"
     
     class Meta:
         verbose_name = "Video"
@@ -73,21 +76,21 @@ class TourVideo(models.Model):
 
 
 class TourService(models.Model):
-    service_description = models.TextField()
+    service = models.TextField()
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.tour.name} - {self.service_description}"
+        return f"{self.tour.title} - {self.service}"
     
     class Meta:
         verbose_name = "Xizmat"
         verbose_name_plural = "Xizmatlar"  
 
 
-class Book(models.Model):
-    seats = models.IntegerField()
+class Booking(models.Model):
     for_connect = models.CharField(max_length=255)
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
     token = models.TextField()
     STATUS_CHOICES = (
         (1, 'Bron qilingan'),
@@ -98,10 +101,9 @@ class Book(models.Model):
     status = models.SmallIntegerField(
         choices=STATUS_CHOICES
     )
-    tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.author.first_name} {self.tour.name}"
+        return f"{self.buyer.username} - {self.tour.title}"
 
     class Meta:
         verbose_name = "Bron"
@@ -114,7 +116,7 @@ class Feedbag(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.author.first_name} {self.tour.name}"
+        return f"{self.author.username} - {self.tour.title}"
 
     class Meta:
         verbose_name = "Izox"
@@ -127,7 +129,7 @@ class Raiting(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.author.first_name} {self.tour.name}"
+        return f"{self.author.username} - {self.tour.title}"
 
     class Meta:
         verbose_name = "Baho"
