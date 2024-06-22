@@ -111,6 +111,7 @@ class Booking(models.Model):
 
 
 class Feedbag(models.Model):
+    status = models.BooleanField(default=False)
     description = models.TextField()
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)

@@ -1,11 +1,10 @@
+import datetime
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-
-from django.db import transaction
 
 from . import models
 from . import serializers
@@ -75,10 +74,10 @@ def delete_category(request, pk):
 def create_tour(request):
     user = request.user
     data = request.data
-    print(data)
     try:
         images = request.FILES.getlist('image')
         videos = request.FILES.getlist('media')
+        services = request.POST.getlist('service')
         category = models.Category.objects.get(id=data['category'])
 
         tour = models.Tour.objects.create(
@@ -104,11 +103,12 @@ def create_tour(request):
                 media=media,
                 tour=tour
             )
-        
-        models.TourService.objects.create(
-            service=data['service'],
-            tour=tour
-        )
+
+        for service in services:
+            models.TourService.objects.create(
+                service=service,
+                tour=tour
+            )
         return Response('The tour has been created', status.HTTP_200_OK)
     except:
         return Response('Bad request', status.HTTP_400_BAD_REQUEST)
@@ -118,7 +118,7 @@ def create_tour(request):
 def get_tours(request):
     tours = models.Tour.objects.all()
     serializer = serializers.TourSerializer(tours, many=True)
-    return Response(serializer.data)
+    return Response(serializer.data, status.HTTP_200_OK)
 
 
 @api_view(['DELETE'])
@@ -127,6 +127,15 @@ def get_tours(request):
 def delete_tour(request, pk):
     try:
         tour = models.Tour.objects.get(pk=pk)
+        tour_images = models.TourImage.objects.filter(tour=tour)
+        tour_videos = models.TourMedia.objects.filter(tour=tour)
+
+        for image in tour_images:
+            image.image.delete(save=False)
+
+        for media in tour_videos: 
+            media.media.delete(save=False) 
+
         tour.delete()
         return Response("The tour has been deleted", status.HTTP_200_OK)
     except:
@@ -137,13 +146,53 @@ def delete_tour(request, pk):
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
 def update_tour(request, pk):
-    # try:
-    tour = models.Tour.objects.get(pk=pk)
-    serializer = serializers.TourSerializer(tour, data=request.data, partial=(request.method == 'PATCH'))
-    if serializer.is_valid():
-        serializer.save()
-        # print("----------------------------------------------------")
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    # except:
-    #     return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    try:
+        images = request.FILES.getlist('image')
+        videos = request.FILES.getlist('media')
+        services = request.POST.getlist('service')
+
+        tour = models.Tour.objects.get(pk=pk)
+
+        tour_images = models.TourImage.objects.filter(tour=tour)
+        tour_videos = models.TourMedia.objects.filter(tour=tour)
+        tour_services = models.TourService.objects.filter(tour=tour)
+
+        serializer = serializers.TourSerializer(tour, data=request.data, partial=(request.method == 'PATCH'))
+        if serializer.is_valid():
+            serializer.save()
+
+            for image in tour_images:
+                image.image.delete(save=False)
+                image.delete()
+
+            for image in images:
+                models.TourImage.objects.create(
+                    image=image,
+                    tour=tour
+                )
+
+            for media in tour_videos: 
+                media.media.delete(save=False)
+                media.delete()
+
+            for media in videos:
+                models.TourMedia.objects.create(
+                    media=media,
+                    tour=tour
+                )
+
+            for service in tour_services:
+                service.delete()
+
+            for service in services:
+                models.TourService.objects.create(
+                    service=service,
+                    tour=tour
+                )
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+# Raiting
