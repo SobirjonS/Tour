@@ -1,23 +1,15 @@
-import datetime
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from django_filters.rest_framework import DjangoFilterBackend
 
 from . import models
 from . import serializers
-
-from django.core.mail import send_mail
-from decouple import config
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication])
-def test_email(request):
-    user = request.user
-    send_mail('Subject here','keldi',config('EMAIL_HOST_USER'),[user.email],fail_silently=False,)
+from . import filters   
 
 
 # Category
@@ -114,11 +106,11 @@ def create_tour(request):
         return Response('Bad request', status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
-def get_tours(request):
-    tours = models.Tour.objects.all()
-    serializer = serializers.TourSerializer(tours, many=True)
-    return Response(serializer.data, status.HTTP_200_OK)
+class TourViewSet(ModelViewSet):
+    queryset = models.Tour.objects.all()
+    serializer_class = serializers.TourSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = filters.TourFilter
 
 
 @api_view(['DELETE'])
@@ -196,3 +188,88 @@ def update_tour(request, pk):
     
 
 # Raiting
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def create_or_updare_raiting(request, pk):    
+    try:
+        author = request.user
+        tour = models.Tour.objects.get(pk=pk)
+        try:
+            raiting = models.Raiting.objects.get(author=author, tour=tour)
+            raiting.grade = request.data['grade']
+            raiting.save()
+            return Response("The raiting has been updated ", status.HTTP_200_OK)
+        except models.Raiting.DoesNotExist:
+            models.Raiting.objects.create(
+                author=author,
+                tour=tour,
+                grade=request.data['grade']
+            )            
+            return Response("The raiting has been created", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def delete_raiting(request, pk):  
+    try:
+        author = request.user
+        tour = models.Tour.objects.get(pk=pk)
+        raiting = models.Raiting.objects.get(author=author, tour=tour)
+        raiting.delete()
+        return Response("The raiting has been deleted", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+# Feedbag
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def create_feedbag(request, pk):
+    try:
+        author = request.user
+        tour = models.Tour.objects.get(pk=pk)
+        models.Feedbag.objects.create(
+            author=author,
+            tour=tour,
+            description=request.data['description']
+        )            
+        return Response("The feedbag has been created", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def update_feedbag(request, pk):
+    try:
+        feedbag = models.Feedbag.objects.get(pk=pk)   
+        if "status" in request.data and request.user.is_admin:
+            if request.data['status'] == "1":
+                feedbag.status = True
+            else:
+                feedbag.status = False
+        elif 'description' in request.data:
+            feedbag.description = request.data['description']
+        feedbag.save()
+        return Response("The feedbag has been updated", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def delete_feedbag(request, pk):
+    try:
+        feedbag = models.Feedbag.objects.get(pk=pk)   
+        if feedbag.author == request.user or request.user.is_admin:
+            feedbag.delete()
+            return Response("The feedbag has been deleted", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)

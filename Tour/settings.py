@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-7i)*^7s$sn-b)d7^%-bkf&m(muu*9=p1sw_=h(dh6e_a=#umev
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'drf_yasg',
+    'django_filters',
 ]
 
 
@@ -90,6 +91,9 @@ WSGI_APPLICATION = 'Tour.wsgi.application'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
     ],
 }
 

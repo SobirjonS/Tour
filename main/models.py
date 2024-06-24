@@ -117,7 +117,7 @@ class Feedbag(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.author.username} - {self.tour.title}"
+        return f"{self.id}) {self.author.username} - {self.tour.title}"
 
     class Meta:
         verbose_name = "Izox"

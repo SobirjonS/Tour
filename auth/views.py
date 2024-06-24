@@ -6,11 +6,62 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from django.contrib.auth import authenticate
+from django.shortcuts import render, redirect
+from django.conf import settings
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
 
+from decouple import config
 from main import models
 from . import serializers
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def update_password(request):
+    user = request.user
+    print(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    reset_url = request.build_absolute_uri(reverse('reset_password_with_token', kwargs={'uidb64': uid, 'token': token}))
+    
+    mail.send_mail(
+        'Reset Your Password',
+        f'Click the link to reset your password: {reset_url}',
+        settings.EMAIL_HOST_USER,
+        [user.email],
+        fail_silently=False,
+    )
+    return Response({"detail": "Password reset link has been sent to your email."}, status=200)
+
+
+@api_view(['POST'])
+def reset_password_with_token(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = models.CustomUser.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, models.CustomUser.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            new_password = request.data.get('new_password')
+            confirm_password = request.data.get('confirm_password')
+
+            if new_password and new_password == confirm_password:
+                user.set_password(new_password)
+                user.save()
+                return Response({"detail": "Password updated successfully"}, status=200)
+            else:
+                return Response({"detail": "Passwords do not match"}, status=400)
+        return render(request, 'reset_password.html', {'validlink': True, 'uidb64': uidb64, 'token': token})
+    else:
+        return render(request, 'reset_password.html', {'validlink': False})
+    
 
 @api_view(['POST'])
 def sign_up(request):
