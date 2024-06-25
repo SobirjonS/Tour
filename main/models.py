@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class CustomUser(AbstractUser):
@@ -110,6 +112,8 @@ class Booking(models.Model):
     class Meta:
         verbose_name = "Bron"
         verbose_name_plural = "Bronlar"  
+
+
 
 
 class Feedbag(models.Model):
