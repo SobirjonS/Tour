@@ -89,6 +89,7 @@ class TourService(models.Model):
 
 class Booking(models.Model):
     for_connect = models.CharField(max_length=255)
+    seats = models.IntegerField()
     buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
     token = models.TextField()
@@ -99,6 +100,7 @@ class Booking(models.Model):
     )
 
     status = models.SmallIntegerField(
+        default=1,
         choices=STATUS_CHOICES
     )
 

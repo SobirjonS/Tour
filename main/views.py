@@ -273,3 +273,35 @@ def delete_feedbag(request, pk):
             return Response("The feedbag has been deleted", status.HTTP_200_OK)
     except:
         return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+# Booking
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def create_booking(request, pk):
+    try:
+        buyer = request.user
+        tour = models.Tour.objects.get(pk=pk)
+        
+        requested_seats = int(request.data['seats'])
+
+        if tour.seats >= requested_seats:
+            booking = models.Booking.objects.create(
+                buyer=buyer,
+                tour=tour,
+                for_connect=request.data['for_connect'],
+                token=request.data['token'],
+                seats=requested_seats
+            )
+            tour.seats = tour.seats - booking.seats
+            tour.save()
+            return Response("The booking has been created", status.HTTP_200_OK)
+        else:
+            return Response("Not enough seats available", status.HTTP_400_BAD_REQUEST)
+    except models.Tour.DoesNotExist:
+        return Response('Tour not found', status.HTTP_404_NOT_FOUND)
+    except ValueError:
+        return Response('Invalid input for seats', status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(f'An error occurred: {str(e)}', status.HTTP_400_BAD_REQUEST)
