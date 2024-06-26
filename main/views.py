@@ -305,3 +305,35 @@ def create_booking(request, pk):
         return Response('Invalid input for seats', status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response(f'An error occurred: {str(e)}', status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def update_booking(request, pk):
+    try:
+        booking = models.Booking.objects.get(pk=pk)  
+        tour = booking.tour
+        requested_status = int(request.data['status']) 
+        if booking.buyer == request.user or request.user.is_admin:
+            booking.status = requested_status
+            booking.save()
+        if requested_status == 1:
+            tour.seats = tour.seats - booking.seats
+            tour.save()
+        return Response("The booking has been updated", status.HTTP_200_OK)
+    except:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def get_booking(request):
+    user = request.user
+    bookings = models.Booking.objects.filter(buyer=user)
+    if bookings:
+        serializer = serializers.BookingSerializer(bookings, many=True)
+        return Response(serializer.data, status.HTTP_200_OK)
+    else:
+        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)

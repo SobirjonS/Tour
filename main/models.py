@@ -22,7 +22,7 @@ class CustomUser(AbstractUser):
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)   
 
     def __str__(self):
         return self.name
@@ -46,7 +46,7 @@ class Tour(models.Model):
 
 
     def __str__(self):
-        return f"{self.creator} - {self.title}"
+        return f"{self.pk}) {self.creator} - {self.title}"
     
     class Meta:
         verbose_name = "Sayohat"
@@ -107,13 +107,20 @@ class Booking(models.Model):
     )
 
     def __str__(self):
-        return f"{self.buyer.username} - {self.tour.title}"
+        return f"{self.pk}) {self.buyer.username} - {self.tour.title}"
 
     class Meta:
         verbose_name = "Bron"
         verbose_name_plural = "Bronlar"  
 
+@receiver(post_save, sender=Booking)
+def check_booking_status(sender, instance, created, **kwargs):
+    tour = instance.tour
+    booking_seats = instance.seats
 
+    if instance.status == 3:
+        tour.seats = tour.seats + booking_seats
+        tour.save()
 
 
 class Feedbag(models.Model):

@@ -36,3 +36,18 @@ class TourSerializer(serializers.ModelSerializer):
             'id', 'category', 'place_name', 'title', 'body', 'start_time', 'end_time',
             'discount', 'cost', 'seats', 'services', 'images', 'media'
         ]
+
+
+
+class BookingTourSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Tour
+        fields = ['title', 'start_time', 'end_time']
+
+
+class BookingSerializer(serializers.ModelSerializer):
+    tour = BookingTourSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Booking
+        fields = ['status']

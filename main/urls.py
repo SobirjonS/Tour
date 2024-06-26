@@ -28,7 +28,9 @@ urlpatterns = [
     path('update-feedbag/<int:pk>/', views.update_feedbag, name='update-feedbag'),
     path('delete-feedbag/<int:pk>/', views.delete_feedbag, name='delete-feedbag'),
     # Booking
-    path('create-booking/<int:pk>/', views.create_booking, name='create-booking')
+    path('create-booking/<int:pk>/', views.create_booking, name='create-booking'),
+    path('update-booking/<int:pk>/', views.update_booking, name='update-booking'),
+    path('get-booking/', views.get_booking, name='get-booking'),
 ]
 
 urlpatterns += router.urls
