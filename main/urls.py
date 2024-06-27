@@ -7,6 +7,8 @@ from . import views
 router = DefaultRouter()
 router.register(r'tours', views.TourViewSet)
 
+router.register(r'booking', views.BookingViewSet)
+
 
 urlpatterns = [
     # Category
@@ -31,6 +33,10 @@ urlpatterns = [
     path('create-booking/<int:pk>/', views.create_booking, name='create-booking'),
     path('update-booking/<int:pk>/', views.update_booking, name='update-booking'),
     path('get-booking/', views.get_booking, name='get-booking'),
+    path('get-bookings-by-day/<int:year>/<int:month>/<int:day>/', views.get_bookings_by_day, name='get_bookings_by_day'),
+    path('get-bookings-by-week/<int:year>/<int:week>/', views.get_bookings_by_week, name='get_bookings_by_week'),
+    path('get-bookings-by-month/<int:year>/<int:month>/', views.get_bookings_by_month, name='get_bookings_by_month'),
+    path('', include(router.urls)),
 ]
 
 urlpatterns += router.urls

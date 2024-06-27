@@ -3,9 +3,15 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminOrReadOnly
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import HttpResponse
+
+import qrcode
+import io
+from datetime import datetime, date, timedelta
 
 from . import models
 from . import serializers
@@ -337,3 +343,76 @@ def get_booking(request):
         return Response(serializer.data, status.HTTP_200_OK)
     else:
         return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    
+
+class BookingViewSet(ModelViewSet):
+    queryset = models.Booking.objects.all()
+    serializer_class = serializers.BookingSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = filters.BookingFilter
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def get_bookings_by_day(request, year, month, day):
+    if request.method == 'POST':
+        try:
+            target_date = date(int(year), int(month), int(day))
+            bookings = models.Booking.objects.filter(created_at=target_date)
+            serializer = serializers.BookingSerializer(bookings, many=True)
+
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(serializer.data)
+            qr.make(fit=True)
+
+            img = qr.make_image(fill='black', back_color='white')
+            buffer = io.BytesIO()
+            img.save(buffer)
+            buffer.seek(0)
+
+            return HttpResponse(buffer, content_type='image/png')
+        except:
+            return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'GET':
+        try:
+            target_date = date(int(year), int(month), int(day))
+            bookings = models.Booking.objects.filter(created_at=target_date)
+            serializer = serializers.BookingSerializer(bookings, many=True)
+            return Response(serializer.data, status=200)
+        except:
+            return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def get_bookings_by_week(request, year, week):
+    try:
+        start_of_week = datetime.strptime(f'{year}-W{int(week)}-1', "%Y-W%W-%w").date()
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        bookings = models.Booking.objects.filter(created_at__range=[start_of_week, end_of_week])
+        serializer = serializers.BookingSerializer(bookings, many=True)
+        return Response(serializer.data, status=200)
+    except:
+        return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def get_bookings_by_month(request, year, month):
+    try:
+        bookings = models.Booking.objects.filter(created_at__year=int(year), created_at__month=int(month))
+        serializer = serializers.BookingSerializer(bookings, many=True)
+        return Response(serializer.data, status=200)
+    except:
+        return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)

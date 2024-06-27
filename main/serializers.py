@@ -38,7 +38,6 @@ class TourSerializer(serializers.ModelSerializer):
         ]
 
 
-
 class BookingTourSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Tour
@@ -46,8 +45,8 @@ class BookingTourSerializer(serializers.ModelSerializer):
 
 
 class BookingSerializer(serializers.ModelSerializer):
-    tour = BookingTourSerializer(many=True, read_only=True)
+    tour = BookingTourSerializer(read_only=True)
 
     class Meta:
         model = models.Booking
-        fields = ['status']
+        fields = ['id', 'created_at', 'for_connect', 'seats', 'token', 'status', 'buyer', 'tour']

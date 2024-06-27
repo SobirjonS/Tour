@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 
 class CustomUser(AbstractUser):
@@ -93,8 +94,9 @@ class Booking(models.Model):
     for_connect = models.CharField(max_length=255)
     seats = models.IntegerField()
     buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
+    tour = models.ForeignKey(Tour, on_delete=models.SET_NULL, null=True, blank=True)
     token = models.TextField()
+    created_at = models.DateField(default=timezone.now)
     STATUS_CHOICES = (
         (1, 'Bron qilingan'),
         (2, 'To`langan'),
