@@ -33,10 +33,19 @@ urlpatterns = [
     path('create-booking/<int:pk>/', views.create_booking, name='create-booking'),
     path('update-booking/<int:pk>/', views.update_booking, name='update-booking'),
     path('get-booking/', views.get_booking, name='get-booking'),
-    path('get-bookings-by-day/<int:year>/<int:month>/<int:day>/', views.get_bookings_by_day, name='get_bookings_by_day'),
-    path('get-bookings-by-week/<int:year>/<int:week>/', views.get_bookings_by_week, name='get_bookings_by_week'),
-    path('get-bookings-by-month/<int:year>/<int:month>/', views.get_bookings_by_month, name='get_bookings_by_month'),
     path('', include(router.urls)),
+    #
+    path('get-bookings-by-day/<int:year>/<int:month>/<int:day>/', views.get_bookings_by_day, name='get-bookings-by-day'),
+    path('get-bookings-by-week/<int:year>/<int:week>/', views.get_bookings_by_week, name='get-bookings-by-week'),
+    path('get-bookings-by-month/<int:year>/<int:month>/', views.get_bookings_by_month, name='get-bookings-by-month'),
+    #
+    path('bookings-report-by-day/<int:year>/<int:month>/<int:day>/', views.booking_report_by_day, name='bookings-report-by-day'),
+    path('bookings-report-by-week/<int:year>/<int:week>/', views.bookings_report_by_week, name='bookings-report-by-week'),
+    path('bookings-report-by-month/<int:year>/<int:month>/', views.booking_report_by_month, name='bookings-report-by-month'),
+    # Answer
+    path('create-answer/<int:pk>/', views.create_answer, name='create-answer'),
+    path('update-answer/<int:pk>/', views.update_answer, name='update-answer'),
+    path('delete-answer/<int:pk>/', views.delete_answer, name='delete-answer'),
 ]
 
 urlpatterns += router.urls

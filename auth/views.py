@@ -24,7 +24,6 @@ from . import serializers
 @authentication_classes([TokenAuthentication])
 def update_password(request):
     user = request.user
-    print(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     reset_url = request.build_absolute_uri(reverse('reset_password_with_token', kwargs={'uidb64': uid, 'token': token}))

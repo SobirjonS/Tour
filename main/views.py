@@ -1,3 +1,4 @@
+import os
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -8,10 +9,14 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
+from django.core import mail
+from django.conf import settings
+from django.urls import reverse
 
 import qrcode
 import io
 from datetime import datetime, date, timedelta
+import openpyxl
 
 from . import models
 from . import serializers
@@ -242,7 +247,7 @@ def create_feedbag(request, pk):
         models.Feedbag.objects.create(
             author=author,
             tour=tour,
-            description=request.data['description']
+            feedbag=request.data['feedbag']
         )            
         return Response("The feedbag has been created", status.HTTP_200_OK)
     except:
@@ -260,8 +265,8 @@ def update_feedbag(request, pk):
                 feedbag.status = True
             else:
                 feedbag.status = False
-        elif 'description' in request.data:
-            feedbag.description = request.data['description']
+        elif 'feedbag' in request.data:
+            feedbag.feedbag = request.data['feedbag']
         feedbag.save()
         return Response("The feedbag has been updated", status.HTTP_200_OK)
     except:
@@ -318,6 +323,7 @@ def create_booking(request, pk):
 @authentication_classes([TokenAuthentication])
 def update_booking(request, pk):
     try:
+        user = request.user
         booking = models.Booking.objects.get(pk=pk)  
         tour = booking.tour
         requested_status = int(request.data['status']) 
@@ -327,6 +333,21 @@ def update_booking(request, pk):
         if requested_status == 1:
             tour.seats = tour.seats - booking.seats
             tour.save()
+            r_status = 'Bron qilingan'
+        elif requested_status == 2:
+            r_status = 'Bron qilingan'
+        elif requested_status == 3:
+            tour.seats = tour.seats + booking.seats
+            tour.save()
+            r_status = 'Bron qilingan'
+
+        mail.send_mail(
+        'Reset Your Password',
+        f'The booking`s status has been updated "{r_status}"',
+        settings.EMAIL_HOST_USER,
+        [user.email],
+        fail_silently=False,
+    )
         return Response("The booking has been updated", status.HTTP_200_OK)
     except:
         return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
@@ -353,42 +374,17 @@ class BookingViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminOrReadOnly])
 @authentication_classes([TokenAuthentication])
 def get_bookings_by_day(request, year, month, day):
-    if request.method == 'POST':
-        try:
-            target_date = date(int(year), int(month), int(day))
-            bookings = models.Booking.objects.filter(created_at=target_date)
-            serializer = serializers.BookingSerializer(bookings, many=True)
-
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=4,
-            )
-            qr.add_data(serializer.data)
-            qr.make(fit=True)
-
-            img = qr.make_image(fill='black', back_color='white')
-            buffer = io.BytesIO()
-            img.save(buffer)
-            buffer.seek(0)
-
-            return HttpResponse(buffer, content_type='image/png')
-        except:
-            return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'GET':
-        try:
-            target_date = date(int(year), int(month), int(day))
-            bookings = models.Booking.objects.filter(created_at=target_date)
-            serializer = serializers.BookingSerializer(bookings, many=True)
-            return Response(serializer.data, status=200)
-        except:
-            return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)
+    try:
+        target_date = date(int(year), int(month), int(day))
+        bookings = models.Booking.objects.filter(created_at=target_date)
+        serializer = serializers.BookingSerializer(bookings, many=True)
+        return Response(serializer.data, status=200)
+    except:
+        return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -416,3 +412,245 @@ def get_bookings_by_month(request, year, month):
         return Response(serializer.data, status=200)
     except:
         return Response({'error': 'Invalid date format'}, status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def booking_report_by_day(request, year, month, day):
+    try:
+        target_date = date(int(year), int(month), int(day))
+        bookings = models.Booking.objects.filter(created_at=target_date)
+        serializer = serializers.BookingSerializer(bookings, many=True)
+
+        if request.method == 'POST':
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "Bookings"
+            
+            headers = ["ID", "For Connect", "Seats", "Buyer", "Tour Title", "Tour Start Time", "Tour End Time", "Token", "Created At", "Status"]
+            sheet.append(headers)
+            
+            for booking in serializer.data:
+                tour = booking.get('tour', {})
+                row = [
+                    booking['id'],
+                    booking['for_connect'],
+                    booking['seats'],
+                    booking['buyer'],
+                    tour.get('title', ''),  
+                    tour.get('start_time', ''), 
+                    tour.get('end_time', ''),
+                    booking['token'],
+                    booking['created_at'],
+                    booking['status'],
+                ]
+                sheet.append(row)
+            
+            os.makedirs('reports', exist_ok=True)
+            
+            filename = f'booking_report_{year}_{month}_{day}-day.xlsx'
+            filepath = os.path.join('reports', filename)
+            workbook.save(filepath)
+
+            with open(filepath, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                response['Content-Disposition'] = f'attachment; filename={filename}'
+                return response
+        else:
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(serializer.data)
+            qr.make(fit=True)
+
+            img = qr.make_image(fill='black', back_color='white')
+            buffer = io.BytesIO()
+            img.save(buffer)
+            buffer.seek(0)
+
+            return HttpResponse(buffer, content_type='image/png')
+    except Exception as e:
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def bookings_report_by_week(request, year, week):
+    try:
+        start_of_week = datetime.strptime(f'{year}-W{int(week)}-1', "%Y-W%W-%w").date()
+        end_of_week = start_of_week + timedelta(days=6)
+        
+        bookings = models.Booking.objects.filter(created_at__range=[start_of_week, end_of_week])
+        serializer = serializers.BookingSerializer(bookings, many=True)
+
+        if request.method == 'POST':
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "Bookings"
+            
+            headers = ["ID", "For Connect", "Seats", "Buyer", "Tour Title", "Tour Start Time", "Tour End Time", "Token", "Created At", "Status"]
+            sheet.append(headers)
+            
+            for booking in serializer.data:
+                tour = booking.get('tour', {})
+                row = [
+                    booking['id'],
+                    booking['for_connect'],
+                    booking['seats'],
+                    booking['buyer'],
+                    tour.get('title', ''),  
+                    tour.get('start_time', ''), 
+                    tour.get('end_time', ''),
+                    booking['token'],
+                    booking['created_at'],
+                    booking['status'],
+                ]
+                sheet.append(row)
+            
+            os.makedirs('reports', exist_ok=True)
+            
+            filename = f'booking_report_{year}_{week}-week.xlsx'
+            filepath = os.path.join('reports', filename)
+            workbook.save(filepath)
+
+            with open(filepath, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                response['Content-Disposition'] = f'attachment; filename={filename}'
+                return response
+        else:
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(serializer.data)
+            qr.make(fit=True)
+
+            img = qr.make_image(fill='black', back_color='white')
+            buffer = io.BytesIO()
+            img.save(buffer)
+            buffer.seek(0)
+
+            return HttpResponse(buffer, content_type='image/png')
+    except Exception as e:
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def booking_report_by_month(request, year, month):
+    try:
+        bookings = models.Booking.objects.filter(created_at__year=int(year), created_at__month=int(month))
+        serializer = serializers.BookingSerializer(bookings, many=True)
+
+        if request.method == 'POST':
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "Bookings"
+            
+            headers = ["ID", "For Connect", "Seats", "Buyer", "Tour Title", "Tour Start Time", "Tour End Time", "Token", "Created At", "Status"]
+            sheet.append(headers)
+            
+            for booking in serializer.data:
+                tour = booking.get('tour', {})
+                row = [
+                    booking['id'],
+                    booking['for_connect'],
+                    booking['seats'],
+                    booking['buyer'],
+                    tour.get('title', ''),  
+                    tour.get('start_time', ''), 
+                    tour.get('end_time', ''),
+                    booking['token'],
+                    booking['created_at'],
+                    booking['status'],
+                ]
+                sheet.append(row)
+            
+            os.makedirs('reports', exist_ok=True)
+            
+            filename = f'booking_report_{year}_{month}-month.xlsx'
+            filepath = os.path.join('reports', filename)
+            workbook.save(filepath)
+
+            with open(filepath, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                response['Content-Disposition'] = f'attachment; filename={filename}'
+                return response
+        else:
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(serializer.data)
+            qr.make(fit=True)
+
+            img = qr.make_image(fill='black', back_color='white')
+            buffer = io.BytesIO()
+            img.save(buffer)
+            buffer.seek(0)
+
+            return HttpResponse(buffer, content_type='image/png')
+    except Exception as e:
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    
+
+# Answer
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def create_answer(request, pk):
+    try:
+        user = request.user
+        feedbag = models.Feedbag.objects.get(pk=pk)
+        answer = request.data['answer']
+        models.AnswerFeedbag.objects.create(
+            answer=answer,
+            feedbag=feedbag,
+            author=user
+        )
+        return Response('The answer has been created', status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def update_answer(request, pk):
+    try:
+        user = request.user
+        answer = models.AnswerFeedbag.objects.get(pk=pk)
+        if user == answer.author:
+            answer.answer = request.data['answer']
+            answer.save()
+            return Response('The answer has been updated', status.HTTP_200_OK)
+        return Response('You don`t have access', status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdminOrReadOnly])
+@authentication_classes([TokenAuthentication])
+def delete_answer(request, pk):
+    try:
+        user = request.user
+        answer = models.AnswerFeedbag.objects.get(pk=pk)
+        if user == answer.author:
+            answer.delete()
+            return Response('The answer has been deleted', status.HTTP_200_OK)
+        return Response('You don`t have access', status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    
+ 

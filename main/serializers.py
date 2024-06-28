@@ -15,26 +15,50 @@ class TourServiceSerializer(serializers.ModelSerializer):
         model = models.TourService
         fields = ['service']
 
+
 class TourImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TourImage
         fields = ['image']
+
 
 class TourMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TourMedia
         fields = ['media']
 
+
+class TourFeedbagAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.AnswerFeedbag
+        fields = ['answer']
+
+
+class TourFeedbagSerializer(serializers.ModelSerializer):
+    answer = TourFeedbagAnswerSerializer(source='answerfeedbag_set', many=True, read_only=True)
+    class Meta:
+        model = models.Feedbag
+        fields = ['feedbag', 'answer']
+
+
+class TourRaitingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Raiting
+        fields = ['grade']
+
+
 class TourSerializer(serializers.ModelSerializer):
     services = TourServiceSerializer(source='tourservice_set', many=True, read_only=True)
     images = TourImageSerializer(source='tourimage_set', many=True, read_only=True)
     media = TourMediaSerializer(source='tourmedia_set', many=True, read_only=True)
+    feedbag = TourFeedbagSerializer(source='feedbag_set', many=True, read_only=True)
+    raiting = TourRaitingSerializer(source='raiting_set', many=True, read_only=True)
 
     class Meta:
         model = models.Tour
         fields = [
             'id', 'category', 'place_name', 'title', 'body', 'start_time', 'end_time',
-            'discount', 'cost', 'seats', 'services', 'images', 'media'
+            'discount', 'cost', 'seats', 'services', 'images', 'media', 'feedbag', 'raiting'
         ]
 
 
@@ -46,6 +70,11 @@ class BookingTourSerializer(serializers.ModelSerializer):
 
 class BookingSerializer(serializers.ModelSerializer):
     tour = BookingTourSerializer(read_only=True)
+    buyer = serializers.CharField(source='buyer.username', read_only=True)
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj):
+        return obj.get_status_display()
 
     class Meta:
         model = models.Booking

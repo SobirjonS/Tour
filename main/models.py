@@ -120,14 +120,10 @@ def check_booking_status(sender, instance, created, **kwargs):
     tour = instance.tour
     booking_seats = instance.seats
 
-    if instance.status == 3:
-        tour.seats = tour.seats + booking_seats
-        tour.save()
-
 
 class Feedbag(models.Model):
     status = models.BooleanField(default=False)
-    description = models.TextField()
+    feedbag = models.TextField()
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
@@ -150,3 +146,16 @@ class Raiting(models.Model):
     class Meta:
         verbose_name = "Baho"
         verbose_name_plural = "Baholar"  
+
+
+class AnswerFeedbag(models.Model):
+    answer = models.TextField()
+    feedbag = models.ForeignKey(Feedbag, on_delete=models.CASCADE)
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.id}) {self.author.username} - {self.feedbag.id}"
+
+    class Meta:
+        verbose_name = "Izoxga javob"
+        verbose_name_plural = "Izohga javoblar"  
