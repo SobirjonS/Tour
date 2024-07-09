@@ -15,7 +15,7 @@ class CustomUser(AbstractUser):
         swappable = 'AUTH_USER_MODEL'
 
     def __str__(self):
-        return self.username
+        return self.email
     
     class Meta:
         verbose_name = "Foydalanuvchi"
@@ -47,7 +47,7 @@ class Tour(models.Model):
 
 
     def __str__(self):
-        return f"{self.pk}) {self.creator} - {self.title}"
+        return f"{self.pk}) {self.creator.first_name} - {self.title}"
     
     class Meta:
         verbose_name = "Sayohat"
@@ -96,7 +96,7 @@ class Booking(models.Model):
     buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     tour = models.ForeignKey(Tour, on_delete=models.SET_NULL, null=True, blank=True)
     token = models.TextField()
-    created_at = models.DateField(default=timezone.now)
+    created_at = models.DateField( )
     STATUS_CHOICES = (
         (1, 'Bron qilingan'),
         (2, 'To`langan'),
@@ -109,7 +109,7 @@ class Booking(models.Model):
     )
 
     def __str__(self):
-        return f"{self.pk}) {self.buyer.username} - {self.tour.title}"
+        return f"{self.pk}) {self.buyer.first_name} - {self.tour.title}"
 
     class Meta:
         verbose_name = "Bron"
@@ -128,7 +128,7 @@ class Feedbag(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.id}) {self.author.username} - {self.tour.title}"
+        return f"{self.id}) {self.author.first_name} - {self.tour.title}"
 
     class Meta:
         verbose_name = "Izox"
@@ -141,9 +141,9 @@ class Raiting(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.author.username} - {self.tour.title}"
+        return f"{self.author.first_name} - {self.tour.title}"
 
-    class Meta:
+    class Meta:            
         verbose_name = "Baho"
         verbose_name_plural = "Baholar"  
 
@@ -154,7 +154,7 @@ class AnswerFeedbag(models.Model):
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.id}) {self.author.username} - {self.feedbag.id}"
+        return f"{self.id}) {self.author.first_name} - {self.feedbag.id}"
 
     class Meta:
         verbose_name = "Izoxga javob"

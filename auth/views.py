@@ -64,7 +64,7 @@ def reset_password_with_token(request, uidb64, token):
 
 @api_view(['POST'])
 def sign_up(request):
-    username = f"{request.data.get('first_name')} {request.data.get('last_name')}"
+    username = request.data.get('first_name')
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
     email = request.data.get('email')
