@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from django.db.models import Avg
 
 
 class CustomUser(AbstractUser):
@@ -45,6 +46,11 @@ class Tour(models.Model):
     cost = models.IntegerField()
     seats = models.IntegerField()
 
+    @property
+    def raiting(self):
+        ratings = Raiting.objects.filter(tour=self)
+        avg_rating = ratings.aggregate(Avg('grade'))['grade__avg']
+        return avg_rating if avg_rating is not None else 0
 
     def __str__(self):
         return f"{self.pk}) {self.creator.first_name} - {self.title}"

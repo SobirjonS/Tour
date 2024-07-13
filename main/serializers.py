@@ -52,7 +52,6 @@ class TourSerializer(serializers.ModelSerializer):
     images = TourImageSerializer(source='tourimage_set', many=True, read_only=True)
     media = TourMediaSerializer(source='tourmedia_set', many=True, read_only=True)
     feedbag = TourFeedbagSerializer(source='feedbag_set', many=True, read_only=True)
-    raiting = TourRaitingSerializer(source='raiting_set', many=True, read_only=True)
 
     class Meta:
         model = models.Tour

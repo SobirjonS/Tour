@@ -199,18 +199,16 @@ def update_tour(request, pk):
     
 
 # Raiting
-@api_view(['POST'])
+@api_view(['POST', 'PUT'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication])
-def create_or_updare_raiting(request, pk):    
-    try:
-        author = request.user
-        tour = models.Tour.objects.get(pk=pk)
+def create_or_updare_raiting(request, pk): 
+    author = request.user
+    tour = models.Tour.objects.get(pk=pk)
+    if request.method == "POST":
         try:
             raiting = models.Raiting.objects.get(author=author, tour=tour)
-            raiting.grade = request.data['grade']
-            raiting.save()
-            return Response("The raiting has been updated ", status.HTTP_200_OK)
+            return Response("Tour has been rated", status.HTTP_400_BAD_REQUEST)
         except models.Raiting.DoesNotExist:
             models.Raiting.objects.create(
                 author=author,
@@ -218,8 +216,14 @@ def create_or_updare_raiting(request, pk):
                 grade=request.data['grade']
             )            
             return Response("The raiting has been created", status.HTTP_200_OK)
-    except:
-        return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
+    if request.method == "PUT":
+        try:
+            raiting = models.Raiting.objects.get(author=author, tour=tour)
+            raiting.grade = request.data['grade']
+            raiting.save()
+            return Response("The raiting has been updated ", status.HTTP_200_OK)
+        except:
+            return Response('Did not find such information', status.HTTP_400_BAD_REQUEST)
     
 
 @api_view(['DELETE'])
